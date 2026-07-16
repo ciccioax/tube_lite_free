@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0f0f1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TubeLite">
+<meta name="description" content="YouTube audio player - riproduci playlist in background">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<title>TubeLite</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--bg:#0f0f1a;--bg2:#1a1a2e;--card:#16213e;--surf:#1e2a4a;--acc:#e94560;--accg:rgba(233,69,96,.3);--t1:#eee;--t2:#8892b0;--t3:#5a6380;--brd:rgba(255,255,255,.06);--r:12px;--st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--t1);min-height:100dvh;-webkit-font-smoothing:antialiased}
+#app{max-width:480px;margin:0 auto;min-height:100dvh;padding-bottom:80px}
+
+.hdr{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:calc(var(--st)+12px) 16px 12px;background:var(--bg2);border-bottom:1px solid var(--brd);backdrop-filter:blur(20px)}
+.hdr h1{font-size:1.2rem;font-weight:700;background:linear-gradient(135deg,var(--acc),#ff6b8a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+.srch{padding:16px}
+.ig{display:flex;gap:8px}
+.ig input{flex:1;background:var(--card);border:1px solid var(--brd);border-radius:var(--r);color:var(--t1);font-size:.95rem;padding:14px;outline:none;min-width:0}
+.ig input::placeholder{color:var(--t3)}
+.btn{background:var(--acc);border:none;color:#fff;padding:14px 20px;border-radius:var(--r);font-size:1rem;font-weight:600;cursor:pointer;flex-shrink:0}
+.btn:active{opacity:.7}
+.btn:disabled{opacity:.4}
+
+.chips{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.chip{background:var(--surf);border:1px solid var(--brd);color:var(--t2);padding:8px 16px;border-radius:20px;font-size:.85rem;cursor:pointer;border:none;transition:all .15s}
+.chip:active{background:var(--acc);color:#fff;border-color:var(--acc)}
+
+.box{margin-top:16px;padding:14px;border-radius:var(--r);font-size:.82rem;line-height:1.6;background:var(--card);color:var(--t2);border:1px solid var(--brd)}
+.box b{color:var(--t1)}
+
+.ld{display:none;align-items:center;gap:12px;padding:16px;color:var(--t2);font-size:.85rem}
+.ld.on{display:flex}
+.spin{width:20px;height:20px;border:3px solid var(--brd);border-top-color:var(--acc);border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+.err{display:none;padding:12px 16px;background:rgba(233,69,96,.1);border:1px solid rgba(233,69,96,.3);border-radius:var(--r);color:#ff6b8a;font-size:.82rem;margin-top:12px}
+.err.on{display:block}
+
+.info-bar{display:none;padding:12px 16px;text-align:center}
+.info-bar .title{font-size:.95rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.info-bar .artist{font-size:.8rem;color:var(--t2);margin-top:2px}
+
+.tabs{display:none;border-bottom:1px solid var(--brd)}
+.tabs.on{display:flex}
+.tab{flex:1;padding:10px;text-align:center;font-size:.85rem;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.tab.on{color:var(--acc);border-bottom-color:var(--acc);font-weight:600}
+
+.qi{display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--brd);transition:background .1s}
+.qi:active{background:var(--surf)}
+.qi.now{background:rgba(233,69,96,.08)}
+.qi-n{font-size:.8rem;color:var(--t3);width:28px;text-align:center;flex-shrink:0}
+.qi.now .qi-n{color:var(--acc)}
+.qi-i{flex:1;min-width:0}
+.qi-t{font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qi.now .qi-t{color:var(--acc);font-weight:600}
+
+.page{display:none}.page.on{display:block}
+
+.mini-player{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--bg2);border-top:1px solid var(--brd);z-index:200;display:none;padding-bottom:var(--sb)}
+.mini-player.on{display:block}
+.mp-bar{height:3px;background:var(--acc);width:0%;transition:width .3s linear}
+.mp-content{display:flex;align-items:center;padding:10px 16px;gap:12px}
+.mp-info{flex:1;min-width:0}
+.mp-title{font-size:.85rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mp-artist{font-size:.7rem;color:var(--t2)}
+.mp-controls{display:flex;align-items:center;gap:2px}
+.mp-btn{background:none;border:none;color:var(--t1);cursor:pointer;padding:6px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.mp-play{width:44px;height:44px;border-radius:50%;background:var(--acc);border:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 12px var(--accg)}
+
+.fp{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;height:100%;height:100dvh;background:linear-gradient(180deg,var(--bg2),var(--bg));z-index:500;display:none;flex-direction:column;padding:var(--st) 0 var(--sb) 0;overflow-y:auto}
+.fp.on{display:flex}
+.fp-h{display:flex;align-items:center;justify-content:space-between;padding:12px 16px}
+.fp-lb{font-size:.75rem;color:var(--t2);text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.fp-art{display:flex;align-items:center;justify-content:center;padding:20px 16px}
+.disc{width:200px;height:200px;border-radius:50%;background:linear-gradient(145deg,#1e2a4a,#16213e);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 30px rgba(0,0,0,.4);transition:all .3s}
+.disc.sp{animation:sp 3s linear infinite}
+.disc svg{opacity:.3}
+.fp-info{text-align:center;padding:0 24px}
+.fp-tt{font-size:1.1rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fp-ar{font-size:.85rem;color:var(--t2);margin-top:4px}
+.fp-pr{padding:20px 24px 0}
+.sldr{width:100%;-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:var(--surf);outline:none}
+.sldr::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--acc);cursor:pointer;box-shadow:0 0 8px var(--accg)}
+.tl{display:flex;justify-content:space-between;font-size:.72rem;color:var(--t3);margin-top:6px}
+.fp-ctrls{display:flex;align-items:center;justify-content:center;gap:16px;padding:20px 24px}
+.ib{background:none;border:none;color:var(--t1);cursor:pointer;padding:8px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.ib:active{background:rgba(255,255,255,.1)}
+.ibxl{background:none;border:none;color:var(--t1);cursor:pointer;padding:4px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.ibplg{background:none;border:none;color:var(--t1);cursor:pointer;padding:4px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.fp-queue{margin-top:8px;padding:0 0 80px}
+.fq-h{display:flex;justify-content:space-between;padding:12px 16px;font-size:.85rem;font-weight:600;color:var(--t2)}
+.fq-c{font-size:.75rem;color:var(--t3)}
+
+@media(max-width:480px){.hdr{max-width:100%}.mini-player,.fp,.inst-bar{max-width:100%}}
+.inst-bar{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);max-width:460px;width:calc(100% - 32px);background:var(--card);border:1px solid var(--brd);border-radius:var(--r);padding:12px 16px;display:flex;align-items:center;gap:12px;z-index:150;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.inst-bar .inst-tx{flex:1;font-size:.82rem;color:var(--t2);line-height:1.4}
+.inst-bar .inst-tx b{color:var(--t1)}
+.inst-bar .inst-btn{background:var(--acc);border:none;color:#fff;padding:8px 14px;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;white-space:nowrap}
+.inst-bar .inst-x{background:none;border:none;color:var(--t3);cursor:pointer;padding:4px;font-size:1.1rem}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="hdr">
+    <h1>TubeLite</h1>
+    <button class="ib" onclick="T.downloadApk()" title="Scarica APK"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg></button>
+  </div>
+  <div class="srch">
+    <div class="ig">
+      <input type="text" id="inp" placeholder="Incolla link YouTube..." autocomplete="off">
+      <button class="btn" id="goBtn">Play</button>
+    </div>
+    <div class="chips" id="chips">
+      <button class="chip" data-u="https://www.youtube.com/watch?v=kJQP7kiw5Fk" data-t="Luis Fonsi - Despacito">Despacito</button>
+      <button class="chip" data-u="https://www.youtube.com/watch?v=JGwWNGJdvx8" data-t="Ed Sheeran - Shape of You">Shape of You</button>
+      <button class="chip" data-u="https://www.youtube.com/watch?v=7NOSDKb0pLw" data-t="Classical Music - Best Of">Classica</button>
+      <button class="chip" data-u="https://www.youtube.com/watch?v=rUxyKA_-grg" data-t="Nature Sounds - Rain">Pioggia</button>
+    </div>
+    <div class="ld" id="loading"><div class="spin"></div><span id="loadTxt"></span></div>
+    <div class="err" id="error"></div>
+    <div class="box" id="box">
+      <b>Come funziona:</b><br>
+      1. Incolla un link YouTube (video o playlist) oppure tocca una categoria<br>
+      2. L'audio parte in riproduzione<br>
+      <b>Background:</b> blocca il telefono o torna alla home. L'audio continua dalla notifica.<br>
+      <b>APK:</b> tocca &#8595; in alto per scaricare l'app Android.
+    </div>
+  </div>
+
+  <div class="info-bar" id="infoBar"><div class="title" id="infoTitle"></div><div class="artist" id="infoArtist"></div></div>
+
+  <div class="tabs" id="tabs">
+    <div class="tab on" onclick="T.tab(0)">Coda</div>
+    <div class="tab" onclick="T.tab(1)">Info</div>
+  </div>
+  <div class="page on" id="page0"><div id="queueList"></div></div>
+  <div class="page" id="page1"><div class="box" style="margin:16px">
+    <b>TubeLite</b> riproduce audio da YouTube in background.<br><br>
+    <b>Installazione Android:</b> tocca il pulsante &#8595; in alto per scaricare l'APK, poi installalo (abilita "Origini sconosciute" se necessario).<br><br>
+    <b>Background:</b> Android mantiene l'audio in background dopo aver toccato play.
+  </div></div>
+</div>
+
+<div class="mini-player" id="miniP">
+  <div class="mp-bar" id="mpBar"></div>
+  <div class="mp-content" onclick="T.showFP()">
+    <div class="mp-info">
+      <div class="mp-title" id="mpTitle">-</div>
+      <div class="mp-artist" id="mpArtist">-</div>
+    </div>
+    <div class="mp-controls">
+      <button class="mp-btn" onclick="event.stopPropagation();T.prev()"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6 6h2v12H6V6zM9.5 12l8.5 6V6l-8.5 6z"/></svg></button>
+      <button class="mp-play" onclick="event.stopPropagation();T.toggle()"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" id="mpPI"><path d="M8 5v14l11-7z"/></svg></button>
+      <button class="mp-btn" onclick="event.stopPropagation();T.next()"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+    </div>
+  </div>
+</div>
+
+<div class="fp" id="fp">
+  <div class="fp-h">
+    <button class="ib" onclick="T.hideFP()"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg></button>
+    <span class="fp-lb">In Riproduzione</span>
+    <div style="width:40px"></div>
+  </div>
+  <div class="fp-art"><div class="disc" id="disc"><svg viewBox="0 0 24 24" width="56" height="56" fill="currentColor"><path d="M12,3v10.55c-0.59,-0.34 -1.27,-0.55 -2,-0.55c-2.21,0 -4,1.79 -4,4s1.79,4 4,4 4,-1.79 4,-4V7h4V3h-6z"/></svg></div></div>
+  <div class="fp-info"><div class="fp-tt" id="fpT">-</div><div class="fp-ar" id="fpA">-</div></div>
+  <div class="fp-pr">
+    <input type="range" class="sldr" id="seekS" min="0" max="1000" value="0" oninput="T.seek(this.value)">
+    <div class="tl"><span id="cTime">0:00</span><span id="tTime">0:00</span></div>
+  </div>
+  <div class="fp-ctrls">
+    <button class="ib" id="shufB" onclick="T.shuf()"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg></button>
+    <button class="ibxl" onclick="T.prev()"><svg viewBox="0 0 24 24" width="36" height="36" fill="currentColor"><path d="M6 6h2v12H6V6zM9.5 12l8.5 6V6l-8.5 6z"/></svg></button>
+    <button class="ibplg" onclick="T.toggle()"><svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor" id="fpPI"><path d="M8 5v14l11-7z"/></svg></button>
+    <button class="ibxl" onclick="T.next()"><svg viewBox="0 0 24 24" width="36" height="36" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+    <button class="ib" id="repB" onclick="T.rep()"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg></button>
+  </div>
+  <div class="fp-queue">
+    <div class="fq-h"><span>Coda</span><span class="fq-c" id="fqC"></span></div>
+    <div id="fqList"></div>
+  </div>
+</div>
+
+<audio id="audioEl" preload="auto"></audio>
+
+<div class="inst-bar" id="instBar">
+  <div class="inst-tx"><b>Scarica TubeLite</b><br>Installa l'APK per ascoltare in background</div>
+  <button class="inst-btn" onclick="T.downloadApk()">Scarica APK</button>
+  <button class="inst-x" onclick="document.getElementById('instBar').className='inst-bar'">&#10005;</button>
+</div>
+
+<script>
+var T=(function(){
+'use strict';
+
+var audio=document.getElementById('audioEl');
+var q=[],ci=-1,playing=false,shf=false,rpt=0,tick=null;
+var $=id=>document.getElementById(id);
+var API='';
+
+function detectAPI(){
+  var loc=window.location;
+  if(loc.port&&loc.port!='80'&&loc.port!='443'){
+    API=loc.protocol+'//'+loc.hostname+':'+loc.port;
+  }else{
+    API=loc.protocol+'//'+loc.host;
+  }
+}
+detectAPI();
+
+audio.addEventListener('play',function(){
+  playing=true;setIcon(true);startTick();setupMediaSession();
+});
+audio.addEventListener('pause',function(){
+  playing=false;setIcon(false);stopTick();
+});
+audio.addEventListener('ended',function(){
+  playing=false;setIcon(false);stopTick();next();
+});
+audio.addEventListener('error',function(e){
+  err('Errore di riproduzione');
+  setTimeout(function(){hideErr();next();},2000);
+});
+audio.addEventListener('timeupdate',function(){
+  if(!audio.duration)return;
+  $('seekS').value=(audio.currentTime/audio.duration)*1000;
+  $('cTime').textContent=fmt(audio.currentTime);
+  $('tTime').textContent=fmt(audio.duration);
+  $('mpBar').style.width=(audio.currentTime/audio.duration*100)+'%';
+});
+
+function extractAudio(url){
+  return fetch(API+'/api/extract?url='+encodeURIComponent(url))
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.error)throw new Error(d.error);
+      return d;
+    });
+}
+
+function loadPlaylist(url){
+  ld(true,'Caricamento playlist...');
+  return fetch(API+'/api/playlist?url='+encodeURIComponent(url))
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.error)throw new Error(d.error);
+      q=[];
+      d.videos.forEach(function(v){q.push({id:v.id,title:v.title,url:null});});
+      ci=-1;
+      renderQ();
+      if(q.length>0)return playIdx(0);
+    });
+}
+
+function playUrl(url,title){
+  ld(true,'Estrazione audio...');
+  extractAudio(url).then(function(d){
+    ld(false);
+    showUI(title||d.title);
+    audio.src=d.url;
+    audio.play().catch(function(e){err('Impossibile riprodurre');});
+    addToQueue(null,title||d.title,url);
+  }).catch(function(e){
+    ld(false);
+    err(e.message||'Errore estrazione audio');
+  });
+}
+
+function playIdx(i){
+  if(i<0||i>=q.length)return Promise.resolve();
+  ci=i;
+  var v=q[i];
+  showUI(v.title);
+  if(v.url){
+    return extractAudio(v.url).then(function(d){
+      v.streamUrl=d.url;
+      audio.src=d.url;
+      audio.play().catch(function(){err('Errore riproduzione');});
+      renderQ();
+    }).catch(function(e){
+      err(e.message||'Errore');
+    });
+  }else if(v.streamUrl){
+    audio.src=v.streamUrl;
+    return audio.play().then(function(){renderQ();}).catch(function(){});
+  }
+  renderQ();
+  return Promise.resolve();
+}
+
+function addToQueue(url,title,originalUrl){
+  var item={id:null,title:title||'YouTube',url:originalUrl||url,streamUrl:null};
+  if(!q.some(function(v){return v.url===item.url&&v.title===item.title;})){
+    q.push(item);
+  }
+  ci=q.findIndex(function(v){return v.url===item.url&&v.title===item.title;});
+  renderQ();
+}
+
+function loadInput(){
+  var v=$('inp').value.trim();if(!v)return;hideErr();
+  var pl=v.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+  if(pl){
+    loadPlaylist(v).catch(function(e){err(e.message||'Errore playlist');});
+    return;
+  }
+  playUrl(v,'');
+}
+
+function showUI(title){
+  $('box').style.display='none';
+  $('chips').style.display='none';
+  $('infoBar').style.display='block';
+  $('infoTitle').textContent=title||'In riproduzione';
+  $('infoArtist').textContent='';
+  $('miniP').className='mini-player on';
+  $('mpTitle').textContent=title||'In riproduzione';
+  $('mpArtist').textContent='';
+  $('tabs').className='tabs on';
+}
+
+function toggle(){if(!audio.src)return;if(playing)audio.pause();else audio.play();}
+function next(){
+  if(!q.length)return;
+  var n=shf?Math.floor(Math.random()*q.length):ci+1;
+  if(n>=q.length){if(rpt===1)n=0;else{audio.pause();return;}}
+  playIdx(n);
+}
+function prev(){
+  if(!audio.src)return;
+  if(audio.currentTime>3){audio.currentTime=0;return;}
+  var i=ci-1;if(i<0)i=q.length-1;
+  playIdx(i);
+}
+function seek(v){if(!audio||!audio.duration)return;audio.currentTime=(v/1000)*audio.duration;}
+function shufTgl(){shf=!shf;$('shufB').style.color=shf?'var(--acc)':'';}
+function repTgl(){rpt=(rpt+1)%3;$('repB').style.color=rpt>0?'var(--acc)':'';}
+
+function startTick(){stopTick();}
+function stopTick(){}
+
+function setIcon(p){
+  var d=p?'M6 19h4V5H6v14zM14 5v14h4V5h-4z':'M8 5v14l11-7z';
+  $('mpPI').innerHTML='<path d="'+d+'"/>';
+  $('fpPI').innerHTML='<path d="'+d+'"/>';
+  if(p)$('disc').classList.add('sp');else $('disc').classList.remove('sp');
+  if('mediaSession' in navigator)navigator.mediaSession.playbackState=p?'playing':'paused';
+}
+
+function renderQ(){
+  var el=$('queueList'),fl=$('fqList');
+  $('fqC').textContent=q.length+' brani';
+  var h=q.map(function(v,i){
+    var c=i===ci?' qi now':' qi';
+    var n=i===ci?'&#9654;':(i+1);
+    return '<div class="'+c+'" onclick="T.playIdx('+i+')"><span class="qi-n">'+n+'</span><div class="qi-i"><div class="qi-t">'+esc(v.title)+'</div></div></div>';
+  }).join('');
+  if(el)el.innerHTML=h||'<div style="padding:20px;text-align:center;color:var(--t3);font-size:.85rem">Nessun brano in coda</div>';
+  if(fl)fl.innerHTML=h;
+}
+
+function setupMediaSession(){
+  if(!('mediaSession' in navigator))return;
+  var t=q[ci];if(!t)return;
+  navigator.mediaSession.metadata=new MediaMetadata({title:t.title,artist:'TubeLite',album:'YouTube'});
+  navigator.mediaSession.setActionHandler('play',function(){audio.play();});
+  navigator.mediaSession.setActionHandler('pause',function(){audio.pause();});
+  navigator.mediaSession.setActionHandler('previoustrack',prev);
+  navigator.mediaSession.setActionHandler('nexttrack',next);
+  navigator.mediaSession.setActionHandler('stop',function(){audio.pause();});
+}
+
+function showFP(){$('fp').classList.add('on');}
+function hideFP(){$('fp').classList.remove('on');}
+function tab(t){
+  document.querySelectorAll('.tab').forEach(function(e,i){e.className=t===i?'tab on':'tab';});
+  document.querySelectorAll('.page').forEach(function(e,i){e.className=t===i?'page on':'page';});
+}
+function ld(s,t){$('loading').className='ld'+(s?' on':'');if(t)$('loadTxt').textContent=t;}
+function err(m){$('error').textContent=m;$('error').className='err'+(m?' on':'');}
+function hideErr(){$('error').className='err';}
+function fmt(s){if(!s||isNaN(s))return'0:00';s=Math.floor(s);var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;return h>0?h+':'+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0'):m+':'+String(sec).padStart(2,'0');}
+function esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+
+$('goBtn').onclick=loadInput;
+$('inp').onkeydown=function(e){if(e.key==='Enter')loadInput();};
+$('chips').onclick=function(e){var v=e.target.dataset.u;if(!v)return;playUrl(v,e.target.dataset.t||'YouTube');};
+
+function downloadApk(){
+  window.location.href=API+'/api/apk';
+}
+
+return {toggle,next,prev,seek,shuf:shufTgl,rep:repTgl,showFP,hideFP,tab,playIdx:playIdx,downloadApk:downloadApk};
+})();
+
+
+</script>
+</body>
+</html>
