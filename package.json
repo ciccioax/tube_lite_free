@@ -1,0 +1,6 @@
+{
+  "name": "tubelite",
+  "scripts": {
+    "start": "python3 server.py"
+  }
+}
