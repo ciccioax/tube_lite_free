@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0f0f1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>TubeLite</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f0f1a;--bg2:#1a1a2e;--card:#16213e;--surf:#1e2a4a;--acc:#e94560;--t1:#eee;--t2:#8892b0;--t3:#5a6380;--brd:rgba(255,255,255,.06);--r:12px;--st:env(safe-area-inset-top,0px)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--t1);min-height:100dvh;padding-bottom:env(safe-area-inset-bottom,0px)}
+.hdr{position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:10px;padding:calc(var(--st)+12px) 16px 12px;background:var(--bg2);border-bottom:1px solid var(--brd)}
+.hdr svg{color:var(--acc);flex-shrink:0}
+.hdr h1{font-size:1.2rem;font-weight:700;background:linear-gradient(135deg,var(--acc),#ff6b8a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.srch{padding:16px}
+.ig{display:flex;gap:8px}
+.ig input{flex:1;background:var(--card);border:1px solid var(--brd);border-radius:var(--r);color:var(--t1);font-size:1rem;padding:14px;outline:none}
+.ig input::placeholder{color:var(--t3)}
+.ig button{background:var(--acc);border:none;color:#fff;padding:14px 24px;border-radius:var(--r);font-size:1rem;font-weight:600;cursor:pointer}
+.ig button:active{opacity:.7}
+.chips{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.chip{background:var(--surf);border:1px solid var(--brd);color:var(--t2);padding:8px 16px;border-radius:20px;font-size:.85rem;cursor:pointer;border:none}
+.chip:active{background:var(--acc);color:#fff}
+.box{margin-top:16px;padding:14px;border-radius:var(--r);font-size:.85rem;line-height:1.6;background:var(--card);color:var(--t2);border:1px solid var(--brd)}
+.box b{color:var(--t1)}
+.dl-btn{display:block;width:100%;margin-top:14px;padding:14px;background:linear-gradient(135deg,var(--acc),#ff6b8a);border:none;color:#fff;border-radius:var(--r);font-size:1rem;font-weight:700;cursor:pointer;text-align:center;text-decoration:none}
+.dl-btn:active{opacity:.8}
+.dl-sub{margin-top:8px;text-align:center;font-size:.75rem;color:var(--t3)}
+#player{position:relative;width:calc(100% - 32px);margin:16px auto 0;padding-top:56.25%;background:#000;border-radius:var(--r);overflow:hidden;display:none}
+#player iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:none}
+.ql{display:none}
+.qh{padding:14px 16px;font-weight:600;font-size:.95rem;border-bottom:1px solid var(--brd)}
+.qi{display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--brd)}
+.qi:active{background:var(--surf)}
+.qi.now{background:rgba(233,69,96,.1)}
+.qi-n{font-size:.8rem;color:var(--t3);width:28px;text-align:center;flex-shrink:0}
+.qi.now .qi-n{color:var(--acc)}
+.qi-t{font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.qi.now .qi-t{color:var(--acc);font-weight:600}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M12,3v10.55c-0.59,-0.34 -1.27,-0.55 -2,-0.55c-2.21,0 -4,1.79 -4,4s1.79,4 4,4 4,-1.79 4,-4V7h4V3h-6z"/></svg>
+  <h1>TubeLite</h1>
+</div>
+
+<div class="srch">
+  <div class="ig">
+    <input type="text" id="inp" placeholder="Incolla link YouTube...">
+    <button id="go">Play</button>
+  </div>
+  <div class="chips" id="chips">
+    <button class="chip" data-v="jfKfPfyJRdk" data-t="Lofi Girl Live">Lofi Live</button>
+    <button class="chip" data-v="5qap5aO4i9A" data-t="Lofi Hip Hop">Lofi Beats</button>
+    <button class="chip" data-v="4fWyzMI163M" data-t="Jazz Live">Jazz</button>
+    <button class="chip" data-v="7NOSDKb0pLw" data-t="Classical Music">Classica</button>
+  </div>
+  <div class="box" id="box">
+    <b>Come funziona:</b><br>
+    Tocca una categoria oppure incolla un link YouTube.<br>
+    Il player YouTube parte subito con i suoi controlli nativi.<br>
+    <b>Audio in background</b>: gioca il video, torna alla home. L'audio continua nella notifica Android.
+  </div>
+  <a class="dl-btn" href="/static/tubelite.html" download="TubeLite.html">&#11015; Scarica TubeLite</a>
+  <div class="dl-sub">Salva il file, aprilo con Chrome, poi "Aggiungi a schermata Home"</div>
+</div>
+
+<div id="player"><iframe id="frame" allow="autoplay;encrypted-media" allowfullscreen></iframe></div>
+
+<div class="ql" id="ql">
+  <div class="qh">Coda</div>
+  <div id="qlist"></div>
+</div>
+
+<script>
+var queue=[],cur=-1;
+
+function play(id,title){
+  document.getElementById('box').style.display='none';
+  document.getElementById('chips').style.display='none';
+  var p=document.getElementById('player');
+  p.style.display='block';
+  document.getElementById('frame').src='https://www.youtube-nocookie.com/embed/'+id+'?autoplay=1&playsinline=1&rel=0';
+
+  if(!queue.some(function(v){return v.id===id;})){
+    queue.push({id:id,title:title||id});
+  }
+  cur=queue.findIndex(function(v){return v.id===id;});
+  renderQ();
+
+  if('mediaSession' in navigator){
+    navigator.mediaSession.metadata=new MediaMetadata({title:title||'YouTube',artist:'TubeLite',album:''});
+  }
+}
+
+function go(){
+  var v=document.getElementById('inp').value.trim();
+  if(!v)return;
+  var m=v.match(/[?&]v=([a-zA-Z0-9_-]{11})/)||v.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/)||v.match(/\/embed\/([a-zA-Z0-9_-]{11})/)||v.match(/\/shorts\/([a-zA-Z0-9_-]{11})/);
+  var pl=v.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+  if(m){play(m[1],'YouTube Video');return;}
+  if(pl){
+    document.getElementById('box').style.display='none';
+    document.getElementById('chips').style.display='none';
+    var p=document.getElementById('player');
+    p.style.display='block';
+    document.getElementById('frame').src='https://www.youtube-nocookie.com/embed/videoseries?list='+pl[1]+'&autoplay=1&playsinline=1';
+    return;
+  }
+  if(/^([a-zA-Z0-9_-]{11})$/.test(v)){play(v,'YouTube Video');return;}
+  document.getElementById('box').textContent='Link non valido';
+  document.getElementById('box').className='box';
+}
+
+function renderQ(){
+  if(!queue.length)return;
+  document.getElementById('ql').style.display='block';
+  document.getElementById('qlist').innerHTML=queue.map(function(v,i){
+    return'<div class="qi'+(i===cur?' now':'')+'" onclick="play(\''+v.id+'\',\''+v.title.replace(/'/g,"\\'")+'\')"><span class="qi-n">'+(i===cur?'&#9654;':(i+1))+'</span><div class="qi-t">'+esc(v.title)+'</div></div>';
+  }).join('');
+}
+
+function esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+
+document.getElementById('go').onclick=go;
+document.getElementById('inp').onkeydown=function(e){if(e.key==='Enter')go();};
+document.getElementById('chips').onclick=function(e){
+  var id=e.target.dataset.v;if(!id)return;
+  play(id,e.target.dataset.t||'YouTube');
+};
+</script>
+</body>
+</html>

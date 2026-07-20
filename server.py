@@ -29,6 +29,46 @@ def index():
 def static_files(path):
     return send_from_directory(DEPLOY_DIR, path)
 
+@app.route('/api/search')
+def handle_search():
+    query = request.args.get('q', '')
+    if not query:
+        return jsonify({'error': 'Missing q parameter'}), 400
+    try:
+        if not HAS_YTDLP:
+            return jsonify({'error': 'yt-dlp not installed'}), 500
+        sources = [
+            ('scsearch', 'SoundCloud'),
+        ]
+        results = []
+        for prefix, source in sources:
+            try:
+                ydl_opts = {
+                    'quiet': True,
+                    'no_warnings': True,
+                    'no_check_certificates': True,
+                    'default_search': 'auto',
+                }
+                search_url = f'{prefix}10:{query}'
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(search_url, download=False)
+                    if info and 'entries' in info:
+                        for e in info['entries']:
+                            if e:
+                                results.append({
+                                    'title': e.get('title', 'Unknown'),
+                                    'duration': e.get('duration', 0),
+                                    'url': e.get('url') or e.get('webpage_url', ''),
+                                    'source': source,
+                                    'thumbnail': e.get('thumbnail', ''),
+                                    'uploader': e.get('uploader', ''),
+                                })
+            except Exception:
+                continue
+        return jsonify({'results': results})
+    except Exception as e:
+        return jsonify({'error': str(e)[:200]}), 500
+
 @app.route('/api/extract')
 def handle_extract():
     url = request.args.get('url', '')

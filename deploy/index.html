@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="TubeLite">
-<meta name="description" content="YouTube audio player - riproduci playlist in background">
+<meta name="description" content="Audio player - riproduci musica in background">
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
 <title>TubeLite</title>
@@ -42,6 +42,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
 .err{display:none;padding:12px 16px;background:rgba(233,69,96,.1);border:1px solid rgba(233,69,96,.3);border-radius:var(--r);color:#ff6b8a;font-size:.82rem;margin-top:12px}
 .err.on{display:block}
+
+.results{padding:0 16px}
+.ri{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--brd);cursor:pointer;transition:background .1s}
+.ri:active{background:var(--surf);margin:0 -16px;padding:10px 16px;border-radius:var(--r)}
+.ri-n{font-size:.8rem;color:var(--t3);width:28px;text-align:center;flex-shrink:0}
+.ri-i{flex:1;min-width:0}
+.ri-t{font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ri-a{font-size:.72rem;color:var(--t3);margin-top:2px}
+.ri-d{font-size:.72rem;color:var(--t3);flex-shrink:0}
+.ri-src{font-size:.65rem;color:var(--acc);background:rgba(233,69,96,.1);padding:2px 6px;border-radius:8px;flex-shrink:0}
 
 .info-bar{display:none;padding:12px 16px;text-align:center}
 .info-bar .title{font-size:.95rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -114,25 +124,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   </div>
   <div class="srch">
     <div class="ig">
-      <input type="text" id="inp" placeholder="Incolla link YouTube..." autocomplete="off">
-      <button class="btn" id="goBtn">Play</button>
+      <input type="text" id="inp" placeholder="Cerca musica..." autocomplete="off">
+      <button class="btn" id="goBtn">Cerca</button>
     </div>
     <div class="chips" id="chips">
-      <button class="chip" data-u="https://www.youtube.com/watch?v=kJQP7kiw5Fk" data-t="Luis Fonsi - Despacito">Despacito</button>
-      <button class="chip" data-u="https://www.youtube.com/watch?v=JGwWNGJdvx8" data-t="Ed Sheeran - Shape of You">Shape of You</button>
-      <button class="chip" data-u="https://www.youtube.com/watch?v=7NOSDKb0pLw" data-t="Classical Music - Best Of">Classica</button>
-      <button class="chip" data-u="https://www.youtube.com/watch?v=rUxyKA_-grg" data-t="Nature Sounds - Rain">Pioggia</button>
+      <button class="chip" data-q="electronic dance music">EDM</button>
+      <button class="chip" data-q="hip hop beats">Hip Hop</button>
+      <button class="chip" data-q="lofi chill beats">Lo-Fi</button>
+      <button class="chip" data-q="classical piano">Classica</button>
+      <button class="chip" data-q="rock greatest hits">Rock</button>
+      <button class="chip" data-q="jazz lounge smooth">Jazz</button>
+      <button class="chip" data-q="rain nature sounds">Pioggia</button>
+      <button class="chip" data-q="meditation ambient">Meditazione</button>
     </div>
     <div class="ld" id="loading"><div class="spin"></div><span id="loadTxt"></span></div>
     <div class="err" id="error"></div>
     <div class="box" id="box">
       <b>Come funziona:</b><br>
-      1. Incolla un link YouTube (video o playlist) oppure tocca una categoria<br>
-      2. L'audio parte in riproduzione<br>
+      1. Cerca una canzone, artista o genere<br>
+      2. Tocca un risultato per ascoltare<br>
       <b>Background:</b> blocca il telefono o torna alla home. L'audio continua dalla notifica.<br>
       <b>APK:</b> tocca &#8595; in alto per scaricare l'app Android.
     </div>
   </div>
+
+  <div id="searchResults" class="results"></div>
 
   <div class="info-bar" id="infoBar"><div class="title" id="infoTitle"></div><div class="artist" id="infoArtist"></div></div>
 
@@ -142,7 +158,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   </div>
   <div class="page on" id="page0"><div id="queueList"></div></div>
   <div class="page" id="page1"><div class="box" style="margin:16px">
-    <b>TubeLite</b> riproduce audio da YouTube in background.<br><br>
+    <b>TubeLite</b> riproduce musica da SoundCloud in background.<br><br>
     <b>Installazione Android:</b> tocca il pulsante &#8595; in alto per scaricare l'APK, poi installalo (abilita "Origini sconosciute" se necessario).<br><br>
     <b>Background:</b> Android mantiene l'audio in background dopo aver toccato play.
   </div></div>
@@ -201,7 +217,7 @@ var T=(function(){
 'use strict';
 
 var audio=document.getElementById('audioEl');
-var q=[],ci=-1,playing=false,shf=false,rpt=0,tick=null;
+var q=[],ci=-1,playing=false,shf=false,rpt=0;
 var $=id=>document.getElementById(id);
 var API='';
 
@@ -216,15 +232,15 @@ function detectAPI(){
 detectAPI();
 
 audio.addEventListener('play',function(){
-  playing=true;setIcon(true);startTick();setupMediaSession();
+  playing=true;setIcon(true);setupMediaSession();
 });
 audio.addEventListener('pause',function(){
-  playing=false;setIcon(false);stopTick();
+  playing=false;setIcon(false);
 });
 audio.addEventListener('ended',function(){
-  playing=false;setIcon(false);stopTick();next();
+  playing=false;setIcon(false);next();
 });
-audio.addEventListener('error',function(e){
+audio.addEventListener('error',function(){
   err('Errore di riproduzione');
   setTimeout(function(){hideErr();next();},2000);
 });
@@ -236,6 +252,48 @@ audio.addEventListener('timeupdate',function(){
   $('mpBar').style.width=(audio.currentTime/audio.duration*100)+'%';
 });
 
+function searchTracks(query){
+  ld(true,'Ricerca in corso...');
+  $('searchResults').innerHTML='';
+  return fetch(API+'/api/search?q='+encodeURIComponent(query))
+    .then(function(r){return r.json();})
+    .then(function(d){
+      ld(false);
+      if(d.error)throw new Error(d.error);
+      renderResults(d.results||[]);
+      return d.results;
+    });
+}
+
+function renderResults(results){
+  var el=$('searchResults');
+  if(!results.length){
+    el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:.85rem">Nessun risultato</div>';
+    return;
+  }
+  el.innerHTML=results.map(function(r,i){
+    var dur=fmt(r.duration||0);
+    return '<div class="ri" onclick="T.playResult('+i+')"><span class="ri-n">'+(i+1)+'</span><div class="ri-i"><div class="ri-t">'+esc(r.title)+'</div><div class="ri-a">'+esc(r.uploader||'')+'</div></div><span class="ri-src">'+esc(r.source)+'</span><span class="ri-d">'+dur+'</span></div>';
+  }).join('');
+  window._results=results;
+}
+
+function playResult(i){
+  var r=window._results[i];
+  if(!r||!r.url)return;
+  ld(true,'Caricamento...');
+  extractAudio(r.url).then(function(d){
+    ld(false);
+    showUI(r.title,r.uploader);
+    audio.src=d.url;
+    audio.play().catch(function(){err('Impossibile riprodurre');});
+    addToQueue(d.url,r.title,r.url,r.uploader);
+  }).catch(function(e){
+    ld(false);
+    err(e.message||'Errore caricamento');
+  });
+}
+
 function extractAudio(url){
   return fetch(API+'/api/extract?url='+encodeURIComponent(url))
     .then(function(r){return r.json();})
@@ -245,40 +303,31 @@ function extractAudio(url){
     });
 }
 
-function loadPlaylist(url){
-  ld(true,'Caricamento playlist...');
-  return fetch(API+'/api/playlist?url='+encodeURIComponent(url))
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.error)throw new Error(d.error);
-      q=[];
-      d.videos.forEach(function(v){q.push({id:v.id,title:v.title,url:null});});
-      ci=-1;
-      renderQ();
-      if(q.length>0)return playIdx(0);
-    });
+function playStream(streamUrl,title,originalUrl,artist){
+  showUI(title,artist);
+  audio.src=streamUrl;
+  audio.play().catch(function(){err('Impossibile riprodurre');});
+  addToQueue(streamUrl,title,originalUrl,artist);
 }
 
-function playUrl(url,title){
-  ld(true,'Estrazione audio...');
-  extractAudio(url).then(function(d){
-    ld(false);
-    showUI(title||d.title);
-    audio.src=d.url;
-    audio.play().catch(function(e){err('Impossibile riprodurre');});
-    addToQueue(null,title||d.title,url);
-  }).catch(function(e){
-    ld(false);
-    err(e.message||'Errore estrazione audio');
-  });
+function addToQueue(streamUrl,title,originalUrl,artist){
+  var item={title:title||'Traccia',url:originalUrl||'',streamUrl:streamUrl,artist:artist||''};
+  if(!q.some(function(v){return v.url===item.url&&v.title===item.title;})){
+    q.push(item);
+  }
+  ci=q.findIndex(function(v){return v.url===item.url&&v.title===item.title;});
+  renderQ();
 }
 
 function playIdx(i){
   if(i<0||i>=q.length)return Promise.resolve();
   ci=i;
   var v=q[i];
-  showUI(v.title);
-  if(v.url){
+  showUI(v.title,v.artist);
+  if(v.streamUrl){
+    audio.src=v.streamUrl;
+    return audio.play().then(function(){renderQ();}).catch(function(){err('Errore');});
+  }else if(v.url){
     return extractAudio(v.url).then(function(d){
       v.streamUrl=d.url;
       audio.src=d.url;
@@ -287,42 +336,33 @@ function playIdx(i){
     }).catch(function(e){
       err(e.message||'Errore');
     });
-  }else if(v.streamUrl){
-    audio.src=v.streamUrl;
-    return audio.play().then(function(){renderQ();}).catch(function(){});
   }
   renderQ();
   return Promise.resolve();
 }
 
-function addToQueue(url,title,originalUrl){
-  var item={id:null,title:title||'YouTube',url:originalUrl||url,streamUrl:null};
-  if(!q.some(function(v){return v.url===item.url&&v.title===item.title;})){
-    q.push(item);
-  }
-  ci=q.findIndex(function(v){return v.url===item.url&&v.title===item.title;});
-  renderQ();
-}
-
-function loadInput(){
-  var v=$('inp').value.trim();if(!v)return;hideErr();
-  var pl=v.match(/[?&]list=([a-zA-Z0-9_-]+)/);
-  if(pl){
-    loadPlaylist(v).catch(function(e){err(e.message||'Errore playlist');});
-    return;
-  }
-  playUrl(v,'');
-}
-
-function showUI(title){
+function doSearch(){
+  var v=$('inp').value.trim();
+  if(!v)return;
+  hideErr();
   $('box').style.display='none';
   $('chips').style.display='none';
+  searchTracks(v).catch(function(e){
+    ld(false);
+    err(e.message||'Errore ricerca');
+  });
+}
+
+function showUI(title,artist){
+  $('box').style.display='none';
+  $('chips').style.display='none';
+  $('searchResults').style.display='none';
   $('infoBar').style.display='block';
   $('infoTitle').textContent=title||'In riproduzione';
-  $('infoArtist').textContent='';
+  $('infoArtist').textContent=artist||'';
   $('miniP').className='mini-player on';
   $('mpTitle').textContent=title||'In riproduzione';
-  $('mpArtist').textContent='';
+  $('mpArtist').textContent=artist||'';
   $('tabs').className='tabs on';
 }
 
@@ -342,9 +382,6 @@ function prev(){
 function seek(v){if(!audio||!audio.duration)return;audio.currentTime=(v/1000)*audio.duration;}
 function shufTgl(){shf=!shf;$('shufB').style.color=shf?'var(--acc)':'';}
 function repTgl(){rpt=(rpt+1)%3;$('repB').style.color=rpt>0?'var(--acc)':'';}
-
-function startTick(){stopTick();}
-function stopTick(){}
 
 function setIcon(p){
   var d=p?'M6 19h4V5H6v14zM14 5v14h4V5h-4z':'M8 5v14l11-7z';
@@ -369,7 +406,7 @@ function renderQ(){
 function setupMediaSession(){
   if(!('mediaSession' in navigator))return;
   var t=q[ci];if(!t)return;
-  navigator.mediaSession.metadata=new MediaMetadata({title:t.title,artist:'TubeLite',album:'YouTube'});
+  navigator.mediaSession.metadata=new MediaMetadata({title:t.title,artist:t.artist||'TubeLite',album:'SoundCloud'});
   navigator.mediaSession.setActionHandler('play',function(){audio.play();});
   navigator.mediaSession.setActionHandler('pause',function(){audio.pause();});
   navigator.mediaSession.setActionHandler('previoustrack',prev);
@@ -389,17 +426,16 @@ function hideErr(){$('error').className='err';}
 function fmt(s){if(!s||isNaN(s))return'0:00';s=Math.floor(s);var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;return h>0?h+':'+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0'):m+':'+String(sec).padStart(2,'0');}
 function esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
 
-$('goBtn').onclick=loadInput;
-$('inp').onkeydown=function(e){if(e.key==='Enter')loadInput();};
-$('chips').onclick=function(e){var v=e.target.dataset.u;if(!v)return;playUrl(v,e.target.dataset.t||'YouTube');};
+$('goBtn').onclick=doSearch;
+$('inp').onkeydown=function(e){if(e.key==='Enter')doSearch();};
+$('chips').onclick=function(e){var v=e.target.dataset.q;if(!v)return;$('inp').value=v;doSearch();};
 
 function downloadApk(){
   window.location.href=API+'/api/apk';
 }
 
-return {toggle,next,prev,seek,shuf:shufTgl,rep:repTgl,showFP,hideFP,tab,playIdx:playIdx,downloadApk:downloadApk};
+return {toggle,next,prev,seek,shuf:shufTgl,rep:repTgl,showFP,hideFP,tab,playIdx:playIdx,playResult:playResult,downloadApk:downloadApk};
 })();
-
 
 </script>
 </body>
