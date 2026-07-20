@@ -41,15 +41,18 @@ def handle_search():
             ('scsearch', 'SoundCloud'),
         ]
         results = []
+        errors = []
         for prefix, source in sources:
             try:
                 ydl_opts = {
-                    'quiet': True,
-                    'no_warnings': True,
+                    'quiet': False,
+                    'no_warnings': False,
                     'no_check_certificates': True,
                     'default_search': 'auto',
+                    'socket_timeout': 10,
                 }
                 search_url = f'{prefix}10:{query}'
+                print(f"[SEARCH] Trying {search_url}", flush=True)
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(search_url, download=False)
                     if info and 'entries' in info:
@@ -63,8 +66,16 @@ def handle_search():
                                     'thumbnail': e.get('thumbnail', ''),
                                     'uploader': e.get('uploader', ''),
                                 })
-            except Exception:
+                        print(f"[SEARCH] Found {len(results)} results", flush=True)
+                    else:
+                        print(f"[SEARCH] No entries in info", flush=True)
+            except Exception as ex:
+                err_msg = str(ex)[:200]
+                print(f"[SEARCH] Error {source}: {err_msg}", flush=True)
+                errors.append(f'{source}: {err_msg}')
                 continue
+        if not results and errors:
+            return jsonify({'error': errors[0], 'results': []})
         return jsonify({'results': results})
     except Exception as e:
         return jsonify({'error': str(e)[:200]}), 500
